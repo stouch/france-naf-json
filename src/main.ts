@@ -2,7 +2,8 @@ import ExcelJS from 'exceljs';
 import fs from 'fs';
 
 const outputFilepath = './output.json';
-const outputReverseFilepath = './output-reverse.json';
+const outputLabelsFilepath = (depthLvl): string =>
+  `./output-labels-${depthLvl}.json`;
 
 // Nomenclature d’activités française – NAF rév. 2
 // Accueil > Définitions, méthodes et qualité > Nomenclatures > Nomenclature d’activités française > Nomenclature d’activités française – NAF rév. 2
@@ -12,6 +13,12 @@ const outputReverseFilepath = './output-reverse.json';
 // Converted file to xlsx :
 const filepath = './data/int_courts_naf_rev_2.xlsx';
 
+const beautifyLabel = (string): string => {
+  let label = string.replace(/\(sf /, '(sauf ');
+  label = label.replace(/ sf /, ' sauf ');
+  return label;
+};
+
 const main = async (): Promise<void> => {
   console.log('Starting...');
   const workbook = new ExcelJS.Workbook();
@@ -20,7 +27,14 @@ const main = async (): Promise<void> => {
 
   console.log('Worksheet ready');
   const output = {};
-  const outputReverse = {};
+  const labelsMapping = {
+    lvl5: {}, // Sections
+    lvl4: {}, // Divisions
+    lvl3: {}, // Groupes
+    lvl2: {}, // Classes
+    lvl1: {}, // Sous classes
+  };
+
   let currentLvl1 = null;
   let currentLvl2 = null;
   let currentLvl3 = null;
@@ -66,6 +80,7 @@ const main = async (): Promise<void> => {
     switch (currentRowLvl) {
       case 1: // Sections
         console.log('- ' + currentLvl1);
+        labelsMapping.lvl1[currentLvl1] = beautifyLabel(label65);
         !output[currentLvl1] &&
           (output[currentLvl1] = {
             divisions: {},
@@ -78,6 +93,7 @@ const main = async (): Promise<void> => {
         break;
       case 2: // Divisions
         console.log('-- ' + currentLvl2);
+        labelsMapping.lvl2[currentLvl2] = beautifyLabel(label65);
         !output[currentLvl1].divisions[currentLvl2] &&
           (output[currentLvl1].divisions[currentLvl2] = {
             groups: {},
@@ -90,6 +106,7 @@ const main = async (): Promise<void> => {
         break;
       case 3: // Groupes
         console.log('--- ' + currentLvl3);
+        labelsMapping.lvl3[currentLvl3] = beautifyLabel(label65);
         !output[currentLvl1].divisions[currentLvl2].groups[currentLvl3] &&
           (output[currentLvl1].divisions[currentLvl2].groups[currentLvl3] = {
             classes: {},
@@ -102,13 +119,7 @@ const main = async (): Promise<void> => {
         break;
       case 4: // Classes
         console.log('---- ' + currentLvl4);
-        outputReverse[currentLvl4] = [
-          currentLvl1,
-          output[currentLvl1].labels.label,
-          currentLvl2,
-          output[currentLvl1].divisions[currentLvl2].labels.label,
-          currentLvl3,
-        ];
+        labelsMapping.lvl4[currentLvl4] = beautifyLabel(label65);
         !output[currentLvl1].divisions[currentLvl2].groups[currentLvl3].classes[
           currentLvl4
         ] &&
@@ -125,14 +136,7 @@ const main = async (): Promise<void> => {
         break;
       case 5: // Sous-classes
         console.log('----- ' + currentLvl5);
-        outputReverse[currentLvl5] = [
-          currentLvl1,
-          output[currentLvl1].labels.label,
-          currentLvl2,
-          output[currentLvl1].divisions[currentLvl2].labels.label,
-          currentLvl3,
-          currentLvl4,
-        ];
+        labelsMapping.lvl5[currentLvl5] = beautifyLabel(label65);
         output[currentLvl1].divisions[currentLvl2].groups[currentLvl3].classes[
           currentLvl4
         ].subclasses[currentLvl5] = {
@@ -151,8 +155,10 @@ const main = async (): Promise<void> => {
   const jsonOutput = JSON.stringify(output);
   await fs.writeFileSync(outputFilepath, jsonOutput);
 
-  const jsonOutputReverse = JSON.stringify(outputReverse);
-  await fs.writeFileSync(outputReverseFilepath, jsonOutputReverse);
+  for (const lvl of Object.keys(labelsMapping)) {
+    const json = JSON.stringify(labelsMapping[lvl]);
+    await fs.writeFileSync(outputLabelsFilepath(lvl), json);
+  }
 
   console.log('Done.');
 };
