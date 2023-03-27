@@ -4,14 +4,20 @@ import fs from 'fs';
 const outputFilepath = './output.json';
 const outputLabelsFilepath = (depthLvl): string =>
   `./output-labels-${depthLvl}.json`;
+const outputMappingFilepath = './output-naf1-naf2.json';
 
 // Nomenclature d’activités française – NAF rév. 2
 // Accueil > Définitions, méthodes et qualité > Nomenclatures > Nomenclature d’activités française > Nomenclature d’activités française – NAF rév. 2
 // https://www.insee.fr/fr/information/2120875
 // -- Fichier : Libellés longs, courts et abrégés de tous les postes (xls)
 //
+// Mapping NAF de version 2003 -> 2008:
+// https://www.insee.fr/fr/information/2579599
+// -- NAF 1 -> NAF 2
+//
 // Converted file to xlsx :
 const filepath = './data/int_courts_naf_rev_2.xlsx';
+const mapping20032008Filepath = './data/table_NAF1-NAF2.xlsx';
 
 const beautifyLabel = (string): string => {
   let label = string.replace(/\(sf /, '(sauf ');
@@ -25,8 +31,13 @@ const main = async (): Promise<void> => {
   await workbook.xlsx.readFile(filepath);
   const sheet = workbook.getWorksheet(1);
 
-  console.log('Worksheet ready');
+  const workbookMapping = new ExcelJS.Workbook();
+  await workbookMapping.xlsx.readFile(mapping20032008Filepath);
+  const sheetMapping = workbookMapping.getWorksheet(1);
+
+  console.log('Worksheets ready');
   const output = {};
+  const outputNaf1ToNaf2 = {};
   const labelsMapping = {
     lvl5: {}, // Sections
     lvl4: {}, // Divisions
@@ -35,14 +46,15 @@ const main = async (): Promise<void> => {
     lvl1: {}, // Sous classes
   };
 
+  const cellValue = (cell: ExcelJS.Cell): string => {
+    return cell.value !== null ? cell.value.toString().trim() : '';
+  };
+
   let currentLvl1 = null;
   let currentLvl2 = null;
   let currentLvl3 = null;
   let currentLvl4 = null;
   let currentLvl5 = null;
-  const cellValue = (cell: ExcelJS.Cell): string => {
-    return cell.value !== null ? cell.value.toString().trim() : '';
-  };
   sheet.eachRow((row: ExcelJS.Row) => {
     const rowCode = cellValue(row.getCell(2));
     let currentRowLvl = null;
@@ -150,6 +162,14 @@ const main = async (): Promise<void> => {
     }
   });
 
+  sheetMapping.eachRow((row: ExcelJS.Row, rowNumber: number) => {
+    if (rowNumber > 1) {
+      const rowCodeNaf1 = cellValue(row.getCell(2));
+      const rowCodeNaf2 = cellValue(row.getCell(4)).substring(0, 6);
+      outputNaf1ToNaf2[rowCodeNaf1] = rowCodeNaf2;
+    }
+  });
+
   console.log('Writing outputs...');
 
   const jsonOutput = JSON.stringify(output);
@@ -159,6 +179,9 @@ const main = async (): Promise<void> => {
     const json = JSON.stringify(labelsMapping[lvl]);
     await fs.writeFileSync(outputLabelsFilepath(lvl), json);
   }
+
+  const naf1ToNaf2JSON = JSON.stringify(outputNaf1ToNaf2);
+  await fs.writeFileSync(outputMappingFilepath, naf1ToNaf2JSON);
 
   console.log('Done.');
 };

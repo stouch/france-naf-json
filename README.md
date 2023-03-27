@@ -1,18 +1,24 @@
 
-# Run the export in JSON
+# Generate the JSON files
 
 ```
 npm run build
 npm start
 ```
 
-The json files are : 
-- output.json           (5-D object : NAF nested levels)
-- output-labels-1.json  (1-D object : Sections labels)
-- output-labels-2.json  (1-D object : Divisions labels)
-- output-labels-3.json  (1-D object : Groupes labels)
-- output-labels-4.json  (1-D object : Classes labels)
-- output-labels-5.json  (1-D object : Sous-classes labels)
+The generated JSON files are : 
+- output.json            : NAF nested levels
+- output-labels-1.json   : Sections
+- output-labels-2.json   : Divisions
+- output-labels-3.json   : Groupes
+- output-labels-4.json   : Classes
+- output-labels-5.json   : Sous-classes
+- output-naf1-naf2.json  : Mapping between Naf rev1 (version 2003) to Naf rev2 (2008)
+
+# Source
+
+- https://www.insee.fr/fr/information/2120875
+- https://www.insee.fr/fr/information/2579599
 
 # Dev
 
