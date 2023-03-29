@@ -164,9 +164,12 @@ const main = async (): Promise<void> => {
 
   sheetMapping.eachRow((row: ExcelJS.Row, rowNumber: number) => {
     if (rowNumber > 1) {
-      const rowCodeNaf1 = cellValue(row.getCell(2));
+      // const rowCodeNaf1 = cellValue(row.getCell(2));
+      const rowCodeNaf1Substring = cellValue(row.getCell(2)).substring(0, 5);
       const rowCodeNaf2 = cellValue(row.getCell(4)).substring(0, 6);
-      outputNaf1ToNaf2[rowCodeNaf1] = rowCodeNaf2;
+      outputNaf1ToNaf2[rowCodeNaf1Substring] = rowCodeNaf2;
+      // This one is never used..
+      // outputNaf1ToNaf2[rowCodeNaf1] = rowCodeNaf2;
     }
   });
 
