@@ -15,9 +15,14 @@ const outputMappingFilepath = './output-naf1-naf2.json';
 // https://www.insee.fr/fr/information/2579599
 // -- NAF 1 -> NAF 2
 //
-// Converted file to xlsx :
+// Old NAF (1973-1992 and 1993-2003):
+// https://www.insee.fr/fr/information/2416409
+//
+// Converted files to xlsx :
 const filepath = './data/int_courts_naf_rev_2.xlsx';
 const mapping20032008Filepath = './data/table_NAF1-NAF2.xlsx';
+const naf1973Filepath = './data/NAP-1973_1993.xlsx';
+const naf1993Filepath = './data/naf1993_liste_n5.xlsx';
 
 const beautifyLabel = (string): string => {
   let label = string.replace(/\(sf /, '(sauf ');
@@ -35,6 +40,14 @@ const main = async (): Promise<void> => {
   await workbookMapping.xlsx.readFile(mapping20032008Filepath);
   const sheetMapping = workbookMapping.getWorksheet(1);
 
+  const workbook1973 = new ExcelJS.Workbook();
+  await workbook1973.xlsx.readFile(naf1973Filepath);
+  const sheet1973 = workbook1973.getWorksheet(1);
+
+  const workbook1993 = new ExcelJS.Workbook();
+  await workbook1993.xlsx.readFile(naf1993Filepath);
+  const sheet1993 = workbook1993.getWorksheet(1);
+
   console.log('Worksheets ready');
   const output = {};
   const outputNaf1ToNaf2 = {};
@@ -49,6 +62,22 @@ const main = async (): Promise<void> => {
   const cellValue = (cell: ExcelJS.Cell): string => {
     return cell.value !== null ? cell.value.toString().trim() : '';
   };
+
+  // On parcours les NAP600 de 73
+  const nap600 = {}
+  sheet1973.eachRow((row: ExcelJS.Row, rowNumber: number) => {
+    if (rowNumber > 1) {
+      nap600[cellValue(row.getCell(4))] = cellValue(row.getCell(5));
+    }
+  });
+
+  // On parcours le NAF de 93 :
+  const naf700 = {}
+  sheet1993.eachRow((row: ExcelJS.Row, rowNumber: number) => {
+    if (rowNumber > 2) {
+      naf700[cellValue(row.getCell(1))] = cellValue(row.getCell(2));
+    }
+  });
 
   let currentLvl1 = null;
   let currentLvl2 = null;
@@ -175,6 +204,14 @@ const main = async (): Promise<void> => {
 
   console.log('Writing outputs...');
 
+  const json1973 = JSON.stringify(nap600);
+  await fs.writeFileSync(outputLabelsFilepath('1973-1992'), json1973);
+
+  const json1993 = JSON.stringify(naf700);
+  await fs.writeFileSync(outputLabelsFilepath('1993-2003'), json1993);
+
+  // The 2003 codes are present in 2008 codes :
+  
   const jsonOutput = JSON.stringify(output);
   await fs.writeFileSync(outputFilepath, jsonOutput);
 
